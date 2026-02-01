@@ -1,9 +1,19 @@
 {
-  "name": "Poker Hand Recorder",
-  "short_name": "PokerHands",
-  "start_url": ".",
+  "name": "Poker Hand Tracker",
+  "short_name": "Poker Tracker",
+  "description": "Track your poker hand history with style",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "icons": []
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%230a0e14'/><text x='256' y='380' font-size='300' text-anchor='middle' fill='%23d4af37'>♠</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
+
