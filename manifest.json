@@ -2,7 +2,7 @@
   "name": "Poker Hand Tracker",
   "short_name": "Poker Tracker",
   "description": "Track your poker hand history with style",
-  "start_url": "/",
+  "start_url": "/handhistory/index.html",
   "display": "standalone",
   "background_color": "#0a0e14",
   "theme_color": "#0a0e14",
@@ -16,4 +16,5 @@
     }
   ]
 }
+
 
