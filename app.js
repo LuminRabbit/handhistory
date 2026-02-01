@@ -1,178 +1,709 @@
-const ranks = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"];
-const suits = [
-  { s:"♠", c:"spades" },
-  { s:"♥", c:"hearts" },
-  { s:"♦", c:"diamonds" },
-  { s:"♣", c:"clubs" }
-];
-
-const positions = ["UTG","UTG+1","LJ","HJ","CO","BTN","SB","BB"];
-const streets = ["Preflop","Flop","Turn","River"];
-
-let hand = resetHand();
-
-function resetHand() {
-  return {
+// Application State
+const state = {
     heroCards: [],
-    position: "",
-    board: [],
-    actions: [],
-    streetIndex: 0,
-    date: new Date().toISOString()
-  };
+    villainCards: [],
+    boardCards: [],
+    blinds: '',
+    position: '',
+    stack: '',
+    activePlayers: [], // Players in the hand
+    heroPlayer: '', // Which player is Hero
+    currentStreet: 'preflop', // Which street we're recording actions for
+    selectedPlayer: '',
+    pendingAction: null, // For bet/raise amounts
+    actions: {
+        preflop: [],
+        flop: [],
+        turn: [],
+        river: []
+    }
+};
+
+// Card data
+const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+const suits = {
+    '♠': '#000',
+    '♥': '#ef4444',
+    '♦': '#ef4444',
+    '♣': '#000'
+};
+
+// Update street indicator
+function updateStreetIndicator() {
+    const indicator = document.getElementById('streetIndicator');
+    const boardCount = state.boardCards.length;
+    
+    if (boardCount === 0) {
+        indicator.innerHTML = '';
+    } else if (boardCount === 3) {
+        indicator.innerHTML = '<span class="street-indicator">Flop</span>';
+    } else if (boardCount === 4) {
+        indicator.innerHTML = '<span class="street-indicator">Turn</span>';
+    } else if (boardCount === 5) {
+        indicator.innerHTML = '<span class="street-indicator">River</span>';
+    }
 }
 
-/* ---------- NAV ---------- */
-
-function newHand() {
-  hand = resetHand();
-  show("hand");
-  renderCards();
-  renderPositions();
-  renderBoard();
-  updateLog();
+// Render selected cards
+function renderSelectedCards(cards, containerId) {
+    const container = document.getElementById(containerId);
+    
+    if (cards.length === 0) {
+        let label = 'Tap to select cards';
+        if (containerId === 'heroSlot') label = 'Tap to select your cards';
+        if (containerId === 'villainSlot') label = 'Tap to select villain cards';
+        if (containerId === 'boardSlot') label = 'Tap to select board cards';
+        
+        container.innerHTML = `<span class="card-slot-label">${label}</span>`;
+        container.classList.remove('has-cards');
+    } else {
+        const cardsHtml = cards.map(card => {
+            const suit = card.slice(-1);
+            const rank = card.slice(0, -1);
+            const color = suits[suit];
+            return `<div class="mini-card" style="color: ${color}">${rank}${suit}</div>`;
+        }).join('');
+        
+        container.innerHTML = `<div class="selected-cards">${cardsHtml}</div>`;
+        container.classList.add('has-cards');
+    }
 }
 
-function goHome() {
-  show("home");
+// Create card grid
+function createCardGrid(selectedCards, maxCards, excludeCards = []) {
+    const container = document.getElementById('cardGridContainer');
+    container.innerHTML = '';
+    
+    Object.keys(suits).forEach(suit => {
+        const suitLabel = document.createElement('div');
+        suitLabel.className = 'suit-label';
+        suitLabel.textContent = suit;
+        suitLabel.style.color = suits[suit];
+        container.appendChild(suitLabel);
+        
+        const grid = document.createElement('div');
+        grid.className = 'card-grid';
+        
+        ranks.forEach(rank => {
+            const cardValue = rank + suit;
+            const isSelected = selectedCards.includes(cardValue);
+            const isDisabled = !isSelected && selectedCards.length >= maxCards;
+            const isExcluded = excludeCards.includes(cardValue);
+            
+            const button = document.createElement('button');
+            button.className = 'card-btn';
+            button.textContent = rank;
+            button.style.color = suits[suit];
+            
+            if (isSelected) {
+                button.classList.add('selected');
+            }
+            
+            if (isDisabled || isExcluded) {
+                button.classList.add('disabled');
+                button.disabled = true;
+            }
+            
+            button.addEventListener('click', () => {
+                if (isSelected) {
+                    const index = selectedCards.indexOf(cardValue);
+                    selectedCards.splice(index, 1);
+                } else if (!isDisabled && !isExcluded) {
+                    selectedCards.push(cardValue);
+                }
+                createCardGrid(selectedCards, maxCards, excludeCards);
+            });
+            
+            grid.appendChild(button);
+        });
+        
+        container.appendChild(grid);
+    });
 }
 
-function viewHands() {
-  show("review");
-  const list = document.getElementById("handList");
-  list.innerHTML = "";
-  const hands = JSON.parse(localStorage.getItem("hands") || "[]");
-
-  hands.forEach(h => {
-    const div = document.createElement("div");
-    div.className = "log";
-    div.textContent = `${h.heroCards.join(" ")} | ${h.position}`;
-    list.appendChild(div);
-  });
+// Modal controls
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('show');
 }
 
-function show(id) {
-  ["home","hand","review"].forEach(x =>
-    document.getElementById(x).classList.add("hidden")
-  );
-  document.getElementById(id).classList.remove("hidden");
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
 }
 
-/* ---------- HERO CARDS ---------- */
-
-function renderCards() {
-  const el = document.getElementById("cards");
-  el.innerHTML = "";
-
-  ranks.forEach(r =>
-    suits.forEach(s => {
-      const b = document.createElement("button");
-      b.className = `card-btn ${s.c}`;
-      b.textContent = r + s.s;
-      b.onclick = () => {
-        if (hand.heroCards.length < 2) {
-          hand.heroCards.push(b.textContent);
-          b.style.background = "#22c55e";
+// Hero cards slot
+document.getElementById('heroSlot').addEventListener('click', () => {
+    document.getElementById('cardModalTitle').textContent = 'Select Hero Cards (2)';
+    const tempCards = [...state.heroCards];
+    const excludeCards = [...state.villainCards, ...state.boardCards];
+    createCardGrid(tempCards, 2, excludeCards);
+    openModal('cardModal');
+    
+    const closeBtn = document.getElementById('closeCardModal');
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    
+    newCloseBtn.addEventListener('click', () => {
+        if (tempCards.length === 2) {
+            state.heroCards = tempCards;
+            renderSelectedCards(state.heroCards, 'heroSlot');
         }
-      };
-      el.appendChild(b);
-    })
-  );
+        closeModal('cardModal');
+    });
+});
+
+// Villain cards slot
+document.getElementById('villainSlot').addEventListener('click', () => {
+    document.getElementById('cardModalTitle').textContent = 'Select Villain Cards (2)';
+    const tempCards = [...state.villainCards];
+    const excludeCards = [...state.heroCards, ...state.boardCards];
+    createCardGrid(tempCards, 2, excludeCards);
+    openModal('cardModal');
+    
+    const closeBtn = document.getElementById('closeCardModal');
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    
+    newCloseBtn.addEventListener('click', () => {
+        state.villainCards = tempCards;
+        renderSelectedCards(state.villainCards, 'villainSlot');
+        closeModal('cardModal');
+    });
+});
+
+// Board cards slot
+document.getElementById('boardSlot').addEventListener('click', () => {
+    document.getElementById('cardModalTitle').textContent = 'Select Board Cards (up to 5)';
+    const tempCards = [...state.boardCards];
+    const excludeCards = [...state.heroCards, ...state.villainCards];
+    createCardGrid(tempCards, 5, excludeCards);
+    openModal('cardModal');
+    
+    const closeBtn = document.getElementById('closeCardModal');
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    
+    newCloseBtn.addEventListener('click', () => {
+        state.boardCards = tempCards;
+        renderSelectedCards(state.boardCards, 'boardSlot');
+        updateStreetIndicator();
+        closeModal('cardModal');
+    });
+});
+
+// Blinds input
+document.getElementById('blindsInput').addEventListener('input', (e) => {
+    state.blinds = e.target.value;
+});
+
+// Position display
+document.getElementById('positionDisplay').addEventListener('click', () => {
+    openModal('positionModal');
+});
+
+document.querySelectorAll('#positionModal .position-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        state.position = btn.dataset.position;
+        document.querySelector('#positionDisplay .position-value').textContent = state.position;
+        document.getElementById('positionDisplay').classList.add('selected');
+        closeModal('positionModal');
+    });
+});
+
+document.getElementById('closePositionModal').addEventListener('click', () => {
+    closeModal('positionModal');
+});
+
+// Stack display
+document.getElementById('stackDisplay').addEventListener('click', () => {
+    openModal('stackModal');
+});
+
+document.querySelectorAll('.stack-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        state.stack = btn.dataset.stack;
+        document.querySelector('#stackDisplay .position-value').textContent = state.stack;
+        document.getElementById('stackDisplay').classList.add('selected');
+        closeModal('stackModal');
+    });
+});
+
+document.getElementById('customStack').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const value = e.target.value.trim();
+        if (value) {
+            state.stack = value;
+            document.querySelector('#stackDisplay .position-value').textContent = value;
+            document.getElementById('stackDisplay').classList.add('selected');
+            e.target.value = '';
+            closeModal('stackModal');
+        }
+    }
+});
+
+document.getElementById('closeStackModal').addEventListener('click', () => {
+    closeModal('stackModal');
+});
+
+// Configure Players
+document.getElementById('configurePlayersBtn').addEventListener('click', () => {
+    openModal('playersModal');
+    updatePlayersModal();
+});
+
+function updatePlayersModal() {
+    // Update player selection buttons
+    document.querySelectorAll('#allPlayersGrid .position-btn').forEach(btn => {
+        if (state.activePlayers.includes(btn.dataset.player)) {
+            btn.classList.add('selected');
+        } else {
+            btn.classList.remove('selected');
+        }
+    });
+    
+    // Update hero selection grid
+    const heroGrid = document.getElementById('heroSelectGrid');
+    heroGrid.innerHTML = '';
+    
+    state.activePlayers.forEach(player => {
+        const btn = document.createElement('button');
+        btn.className = 'btn position-btn';
+        btn.dataset.player = player;
+        btn.textContent = player;
+        
+        if (state.heroPlayer === player) {
+            btn.classList.add('selected');
+            btn.style.background = 'var(--accent-gold)';
+            btn.style.color = 'var(--bg-primary)';
+        }
+        
+        btn.addEventListener('click', () => {
+            state.heroPlayer = player;
+            updatePlayersModal();
+        });
+        
+        heroGrid.appendChild(btn);
+    });
 }
 
-/* ---------- POSITION ---------- */
+// All players grid - toggle selection
+document.querySelectorAll('#allPlayersGrid .position-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const player = btn.dataset.player;
+        const index = state.activePlayers.indexOf(player);
+        
+        if (index > -1) {
+            state.activePlayers.splice(index, 1);
+            // If this was the hero, clear hero
+            if (state.heroPlayer === player) {
+                state.heroPlayer = '';
+            }
+        } else {
+            state.activePlayers.push(player);
+        }
+        
+        updatePlayersModal();
+    });
+});
 
-function renderPositions() {
-  const el = document.getElementById("positions");
-  el.innerHTML = "";
+// Save players configuration
+document.getElementById('savePlayersBtn').addEventListener('click', () => {
+    if (state.activePlayers.length === 0) {
+        alert('Please select at least one player');
+        return;
+    }
+    
+    updateActivePlayerGrid();
+    closeModal('playersModal');
+});
 
-  positions.forEach(p => {
-    const b = document.createElement("button");
-    b.className = "btn secondary";
-    b.textContent = p;
-    b.onclick = () => {
-      hand.position = p;
-      renderPositions();
+document.getElementById('closePlayersModal').addEventListener('click', () => {
+    closeModal('playersModal');
+});
+
+// Street selection
+document.querySelectorAll('.street-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.street-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.currentStreet = btn.dataset.street;
+    });
+});
+
+// Action buttons
+document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (!state.selectedPlayer) {
+            alert('Please select a player first');
+            return;
+        }
+        
+        const action = btn.dataset.action;
+        
+        // If Bet or Raise, open amount modal
+        if (action === 'Bet' || action === 'Raise') {
+            state.pendingAction = action;
+            document.getElementById('betAmountTitle').textContent = `Enter ${action} Amount`;
+            document.getElementById('betAmountInput').value = '';
+            openModal('betAmountModal');
+        } else {
+            // Record action immediately
+            recordAction(state.selectedPlayer, action);
+        }
+    });
+});
+
+// Bet amount confirmation
+document.getElementById('confirmBetAmount').addEventListener('click', () => {
+    const amount = document.getElementById('betAmountInput').value.trim();
+    if (!amount) {
+        alert('Please enter an amount');
+        return;
+    }
+    
+    const fullAction = `${state.pendingAction} ${amount}`;
+    recordAction(state.selectedPlayer, fullAction);
+    closeModal('betAmountModal');
+    state.pendingAction = null;
+});
+
+document.getElementById('closeBetAmountModal').addEventListener('click', () => {
+    closeModal('betAmountModal');
+    state.pendingAction = null;
+});
+
+// Allow Enter key in bet amount input
+document.getElementById('betAmountInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('confirmBetAmount').click();
+    }
+});
+
+// Record action
+function recordAction(player, action) {
+    const actionText = `${player}: ${action}`;
+    state.actions[state.currentStreet].push(actionText);
+    updateActionLog();
+    
+    // Clear player selection
+    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
+    state.selectedPlayer = '';
+}
+
+// Undo last action
+document.getElementById('undoActionBtn').addEventListener('click', () => {
+    const currentActions = state.actions[state.currentStreet];
+    if (currentActions.length > 0) {
+        currentActions.pop();
+        updateActionLog();
+    } else {
+        alert('No actions to undo on current street');
+    }
+});
+
+// Update action log
+function updateActionLog() {
+    ['preflop', 'flop', 'turn', 'river'].forEach(street => {
+        const logElement = document.getElementById(`log${street.charAt(0).toUpperCase() + street.slice(1)}`);
+        logElement.innerHTML = state.actions[street]
+            .map(action => `<div class="action-item">${action}</div>`)
+            .join('');
+    });
+}
+
+// Save hand
+document.getElementById('saveBtn').addEventListener('click', () => {
+    if (state.heroCards.length !== 2) {
+        alert('Please select your 2 hero cards');
+        return;
+    }
+    
+    if (!state.blinds) {
+        alert('Please enter blinds');
+        return;
+    }
+    
+    const hand = {
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        heroCards: state.heroCards,
+        villainCards: state.villainCards,
+        boardCards: state.boardCards,
+        blinds: state.blinds,
+        position: state.position,
+        stack: state.stack,
+        activePlayers: [...state.activePlayers],
+        heroPlayer: state.heroPlayer,
+        actions: { ...state.actions }
     };
-    if (hand.position === p) b.style.background = "#22c55e";
-    el.appendChild(b);
-  });
+    
+    // Get existing hands
+    const hands = JSON.parse(localStorage.getItem('pokerHands') || '[]');
+    hands.push(hand);
+    localStorage.setItem('pokerHands', JSON.stringify(hands));
+    
+    alert('Hand saved successfully!');
+    
+    // Reset state
+    resetHand();
+});
+
+// Reset hand
+function resetHand() {
+    state.heroCards = [];
+    state.villainCards = [];
+    state.boardCards = [];
+    state.blinds = '';
+    state.position = '';
+    state.stack = '';
+    state.activePlayers = [];
+    state.heroPlayer = '';
+    state.currentStreet = 'preflop';
+    state.selectedPlayer = '';
+    state.pendingAction = null;
+    state.actions = {
+        preflop: [],
+        flop: [],
+        turn: [],
+        river: []
+    };
+    
+    renderSelectedCards([], 'heroSlot');
+    renderSelectedCards([], 'villainSlot');
+    renderSelectedCards([], 'boardSlot');
+    updateStreetIndicator();
+    updateActionLog();
+    
+    document.getElementById('blindsInput').value = '';
+    document.getElementById('selectedPlayersContainer').style.display = 'none';
+    document.querySelectorAll('.street-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.street-btn[data-street="preflop"]').classList.add('active');
+    document.querySelector('#positionDisplay .position-value').textContent = '—';
+    document.querySelector('#stackDisplay .position-value').textContent = '—';
+    document.getElementById('positionDisplay').classList.remove('selected');
+    document.getElementById('stackDisplay').classList.remove('selected');
 }
 
-/* ---------- ACTIONS ---------- */
+// View history
+document.getElementById('viewHistoryBtn').addEventListener('click', () => {
+    displayHistory();
+});
 
-function logAction(action) {
-  const entry = `${streets[hand.streetIndex]}: Hero ${action}`;
-  hand.actions.push(entry);
-  updateLog();
+function displayHistory() {
+    const hands = JSON.parse(localStorage.getItem('pokerHands') || '[]');
+    const historyList = document.getElementById('historyList');
+    
+    if (hands.length === 0) {
+        historyList.innerHTML = '<div class="action-item" style="text-align: center; padding: 2rem;">No hands saved yet</div>';
+    } else {
+        historyList.innerHTML = hands.reverse().map((hand, index) => {
+            const actualIndex = hands.length - 1 - index; // Get original index
+            
+            const heroCardsHtml = hand.heroCards.map(card => {
+                const suit = card.slice(-1);
+                const rank = card.slice(0, -1);
+                const color = suits[suit];
+                return `<span style="color: ${color}">${rank}${suit}</span>`;
+            }).join(' ');
+            
+            const villainCardsHtml = hand.villainCards && hand.villainCards.length > 0 
+                ? hand.villainCards.map(card => {
+                    const suit = card.slice(-1);
+                    const rank = card.slice(0, -1);
+                    const color = suits[suit];
+                    return `<span style="color: ${color}">${rank}${suit}</span>`;
+                }).join(' ')
+                : '<span style="color: var(--text-secondary);">Unknown</span>';
+            
+            const boardCardsHtml = hand.boardCards && hand.boardCards.length > 0
+                ? hand.boardCards.map(card => {
+                    const suit = card.slice(-1);
+                    const rank = card.slice(0, -1);
+                    const color = suits[suit];
+                    return `<span style="color: ${color}">${rank}${suit}</span>`;
+                }).join(' ')
+                : '<span style="color: var(--text-secondary);">None</span>';
+            
+            // Build action columns
+            const actionsHtml = `
+                <div class="history-actions-grid">
+                    <div class="history-street-column">
+                        <div class="history-street-title">Preflop</div>
+                        ${hand.actions.preflop.map(a => `<div class="action-item">${a}</div>`).join('') || '<div class="action-item" style="color: var(--text-secondary);">None</div>'}
+                    </div>
+                    <div class="history-street-column">
+                        <div class="history-street-title">Flop</div>
+                        ${hand.actions.flop.map(a => `<div class="action-item">${a}</div>`).join('') || '<div class="action-item" style="color: var(--text-secondary);">None</div>'}
+                    </div>
+                    <div class="history-street-column">
+                        <div class="history-street-title">Turn</div>
+                        ${hand.actions.turn.map(a => `<div class="action-item">${a}</div>`).join('') || '<div class="action-item" style="color: var(--text-secondary);">None</div>'}
+                    </div>
+                    <div class="history-street-column">
+                        <div class="history-street-title">River</div>
+                        ${hand.actions.river.map(a => `<div class="action-item">${a}</div>`).join('') || '<div class="action-item" style="color: var(--text-secondary);">None</div>'}
+                    </div>
+                </div>
+            `;
+            
+            const playersInfo = hand.activePlayers && hand.activePlayers.length > 0
+                ? `<strong>Players:</strong> ${hand.activePlayers.join(', ')} ${hand.heroPlayer ? `(Hero: ${hand.heroPlayer})` : ''}<br>`
+                : '';
+            
+            return `
+                <div class="history-item" data-hand-index="${actualIndex}">
+                    <div class="history-date">${hand.date} <span class="expand-indicator">▼ Click to expand</span></div>
+                    <div class="history-details">
+                        <div>
+                            <strong>Hero:</strong> ${heroCardsHtml}<br>
+                            <strong>Villain:</strong> ${villainCardsHtml}<br>
+                            <strong>Board:</strong> ${boardCardsHtml}<br>
+                            <strong>Blinds:</strong> ${hand.blinds} | 
+                            <strong>Pos:</strong> ${hand.position || 'N/A'} | 
+                            <strong>Stack:</strong> ${hand.stack || 'N/A'}
+                        </div>
+                    </div>
+                    <div class="history-expanded-content">
+                        ${playersInfo}
+                        <strong>Actions:</strong>
+                        ${actionsHtml}
+                        <button class="delete-hand-btn" onclick="deleteHand(${actualIndex})">🗑️ Delete Hand</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click handlers to expand/collapse
+        document.querySelectorAll('.history-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Don't toggle if clicking delete button
+                if (e.target.classList.contains('delete-hand-btn')) {
+                    return;
+                }
+                item.classList.toggle('expanded');
+                const indicator = item.querySelector('.expand-indicator');
+                if (item.classList.contains('expanded')) {
+                    indicator.textContent = '▲ Click to collapse';
+                } else {
+                    indicator.textContent = '▼ Click to expand';
+                }
+            });
+        });
+    }
+    
+    openModal('historyModal');
 }
 
-function updateLog() {
-  document.getElementById("log").innerHTML = hand.actions.join("<br>");
-  document.getElementById("streetTitle").textContent = streets[hand.streetIndex];
-}
+// Delete hand function
+window.deleteHand = function(index) {
+    if (!confirm('Are you sure you want to delete this hand?')) {
+        return;
+    }
+    
+    const hands = JSON.parse(localStorage.getItem('pokerHands') || '[]');
+    hands.splice(index, 1);
+    localStorage.setItem('pokerHands', JSON.stringify(hands));
+    
+    // Refresh the history display
+    displayHistory();
+};
 
-/* ---------- BOARD ---------- */
+document.getElementById('closeHistoryModal').addEventListener('click', () => {
+    closeModal('historyModal');
+});
 
-function renderBoard() {
-  const el = document.getElementById("board");
-  el.innerHTML = "";
-
-  ranks.forEach(r =>
-    suits.forEach(s => {
-      const b = document.createElement("button");
-      b.className = `card-btn ${s.c}`;
-      b.textContent = r + s.s;
-      b.onclick = () => {
-        if (
-          (hand.streetIndex === 1 && hand.board.length < 3) ||
-          (hand.streetIndex > 1 && hand.board.length < hand.streetIndex + 2)
-        ) {
-          hand.board.push(b.textContent);
-          b.style.background = "#22c55e";
-          if (
-            hand.streetIndex === 1 && hand.board.length === 3 ||
-            hand.streetIndex > 1
-          ) {
-            hand.streetIndex++;
-            updateLog();
-          }
+// Close modals on background click
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal(modal.id);
         }
-      };
-      el.appendChild(b);
-    })
-  );
+    });
+});
+
+function updateActivePlayerGrid() {
+    const activeGrid = document.getElementById('activePlayerGrid');
+    activeGrid.innerHTML = '';
+    
+    state.activePlayers.forEach(player => {
+        const btn = document.createElement('button');
+        btn.className = 'btn player-btn';
+        btn.dataset.player = player;
+        btn.textContent = player;
+        
+        if (player === state.heroPlayer) {
+            btn.innerHTML = `${player} ⭐`;
+        }
+        
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.selectedPlayer = player;
+        });
+        
+        activeGrid.appendChild(btn);
+    });
+    
+    if (state.activePlayers.length > 0) {
+        document.getElementById('selectedPlayersContainer').style.display = 'block';
+    }
 }
 
-/* ---------- VOICE ---------- */
+// Keyboard shortcuts for faster input
+document.addEventListener('keydown', (e) => {
+    // Show shortcuts help
+    if (e.key === '?' && e.shiftKey) {
+        openModal('shortcutsModal');
+        return;
+    }
+    
+    // Only activate if not typing in an input
+    if (e.target.tagName === 'INPUT') return;
+    
+    // Number keys 1-9 for player selection (if players are configured)
+    if (e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key) - 1;
+        const playerBtns = document.querySelectorAll('.player-btn');
+        if (playerBtns[index]) {
+            playerBtns[index].click();
+        }
+    }
+    
+    // Action shortcuts
+    if (state.selectedPlayer) {
+        if (e.key === 'f' || e.key === 'F') {
+            // Fold
+            document.querySelector('.action-btn[data-action="Fold"]').click();
+        } else if (e.key === 'c' || e.key === 'C') {
+            // Call
+            document.querySelector('.action-btn[data-action="Call"]').click();
+        } else if (e.key === 'k' || e.key === 'K') {
+            // Check
+            document.querySelector('.action-btn[data-action="Check"]').click();
+        } else if (e.key === 'b' || e.key === 'B') {
+            // Bet
+            document.querySelector('.action-btn[data-action="Bet"]').click();
+        } else if (e.key === 'r' || e.key === 'R') {
+            // Raise
+            document.querySelector('.action-btn[data-action="Raise"]').click();
+        } else if (e.key === 'a' || e.key === 'A') {
+            // All-in
+            document.querySelector('.action-btn[data-action="All-in"]').click();
+        }
+    }
+    
+    // Undo with Ctrl+Z or Cmd+Z
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        document.getElementById('undoActionBtn').click();
+    }
+});
 
-function voiceInput() {
-  if (!("webkitSpeechRecognition" in window)) {
-    alert("Voice not supported");
-    return;
-  }
+document.getElementById('closeShortcutsModal').addEventListener('click', () => {
+    closeModal('shortcutsModal');
+});
 
-  const rec = new webkitSpeechRecognition();
-  rec.lang = "en-US";
-  rec.onresult = e => {
-    hand.actions.push(`${streets[hand.streetIndex]}: ${e.results[0][0].transcript}`);
-    updateLog();
-  };
-  rec.start();
-}
-
-/* ---------- SAVE ---------- */
-
-function saveHand() {
-  const hands = JSON.parse(localStorage.getItem("hands") || "[]");
-  hands.push(hand);
-  localStorage.setItem("hands", JSON.stringify(hands));
-  alert("Hand saved");
-  goHome();
-}
-
-/* ---------- PWA ---------- */
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
+// Initialize
+renderSelectedCards(state.heroCards, 'heroSlot');
+renderSelectedCards(state.villainCards, 'villainSlot');
+renderSelectedCards(state.boardCards, 'boardSlot');
+updateActionLog();
