@@ -1,0 +1,9 @@
+{
+  "name": "Poker Hand Recorder",
+  "short_name": "PokerHands",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": []
+}
