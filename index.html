@@ -1,86 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Poker Hand Recorder</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poker Hand Recorder</title>
 
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
 
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f172a;
-      color: white;
-      margin: 0;
-      padding: 16px;
-    }
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: white;
+  margin: 0;
+  padding: 12px;
+}
 
-    h1 {
-      text-align: center;
-      margin-bottom: 12px;
-    }
+h1, h2 {
+  text-align: center;
+}
 
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      margin: 8px 0;
-      font-size: 18px;
-      border-radius: 12px;
-      border: none;
-      background: #22c55e;
-      color: #022c22;
-      font-weight: bold;
-    }
+.btn {
+  width: 100%;
+  padding: 14px;
+  margin: 6px 0;
+  font-size: 18px;
+  border-radius: 12px;
+  border: none;
+  background: #22c55e;
+  color: #022c22;
+  font-weight: bold;
+}
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-    }
+.secondary {
+  background: #1e293b;
+  color: white;
+}
 
-    .card-btn {
-      padding: 14px;
-      font-size: 18px;
-      border-radius: 10px;
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: white;
-    }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
 
-    .hearts, .diamonds { color: #ef4444; }
-    .spades, .clubs { color: #e5e7eb; }
+.card-btn {
+  padding: 12px;
+  font-size: 18px;
+  border-radius: 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+}
 
-    textarea {
-      width: 100%;
-      height: 120px;
-      margin-top: 8px;
-      border-radius: 10px;
-      padding: 10px;
-      font-size: 16px;
-    }
+.hearts, .diamonds { color: #ef4444; }
+.spades, .clubs { color: #e5e7eb; }
 
-    .hidden { display: none; }
-  </style>
+.hidden { display: none; }
+
+.log {
+  background: #020617;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  min-height: 80px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+</style>
 </head>
+
 <body>
 
 <h1>🃏 Poker Hand</h1>
 
 <div id="home">
-  <button class="btn" onclick="startHand()">➕ New Hand</button>
+  <button class="btn" onclick="newHand()">➕ New Hand</button>
+  <button class="btn secondary" onclick="viewHands()">📋 Review Hands</button>
 </div>
 
 <div id="hand" class="hidden">
+
   <h2>Hero Cards</h2>
   <div id="cards" class="grid"></div>
 
+  <h2>Position</h2>
+  <div class="grid" id="positions"></div>
+
+  <h2 id="streetTitle">Preflop</h2>
+  <div class="action-grid">
+    <button class="btn secondary" onclick="logAction('folds')">Fold</button>
+    <button class="btn secondary" onclick="logAction('calls')">Call</button>
+    <button class="btn secondary" onclick="logAction('raises')">Raise</button>
+  </div>
+
+  <button class="btn secondary" onclick="voiceInput()">🎙️ Speak Action</button>
+
+  <h2>Board</h2>
+  <div id="board" class="grid"></div>
+
   <h2>Action Log</h2>
-  <textarea id="actions" placeholder="BTN raises 3bb, Hero calls..."></textarea>
+  <div class="log" id="log"></div>
 
   <button class="btn" onclick="saveHand()">💾 Save Hand</button>
+</div>
+
+<div id="review" class="hidden">
+  <h2>Saved Hands</h2>
+  <div id="handList"></div>
+  <button class="btn secondary" onclick="goHome()">⬅ Back</button>
 </div>
 
 <script src="app.js"></script>
