@@ -1,119 +1,858 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Poker Hand Recorder</title>
-
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
-
-<style>
-body {
-  font-family: system-ui, sans-serif;
-  background: #0f172a;
-  color: white;
-  margin: 0;
-  padding: 12px;
-}
-
-h1, h2 {
-  text-align: center;
-}
-
-.btn {
-  width: 100%;
-  padding: 14px;
-  margin: 6px 0;
-  font-size: 18px;
-  border-radius: 12px;
-  border: none;
-  background: #22c55e;
-  color: #022c22;
-  font-weight: bold;
-}
-
-.secondary {
-  background: #1e293b;
-  color: white;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.card-btn {
-  padding: 12px;
-  font-size: 18px;
-  border-radius: 10px;
-  background: #1e293b;
-  border: 1px solid #334155;
-}
-
-.hearts, .diamonds { color: #ef4444; }
-.spades, .clubs { color: #e5e7eb; }
-
-.hidden { display: none; }
-
-.log {
-  background: #020617;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 14px;
-  min-height: 80px;
-}
-
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0e14">
+    <meta name="description" content="Track your poker hand history with style">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>Poker Hand Tracker</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎰</text></svg>">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Space+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #141922;
+            --bg-tertiary: #1e242e;
+            --bg-card: #252d3a;
+            --accent-gold: #d4af37;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border: #374151;
+            --shadow: rgba(0, 0, 0, 0.5);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(239, 68, 68, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .app {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+            padding-bottom: 2rem;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-align: center;
+            margin: 1.5rem 0 2rem;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #f4e6c3 50%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+        
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+            opacity: 0.3;
+        }
+        
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+        }
+        
+        .card-slot {
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-slot:active {
+            transform: scale(0.98);
+        }
+        
+        .card-slot.has-cards {
+            border-style: solid;
+            border-color: var(--accent-gold);
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+        }
+        
+        .card-slot-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .selected-cards {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .mini-card {
+            width: 45px;
+            height: 65px;
+            background: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            animation: cardDrop 0.3s ease-out;
+        }
+        
+        @keyframes cardDrop {
+            from {
+                transform: translateY(-20px) rotateY(90deg);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) rotateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+        
+        .btn:active::before {
+            width: 200px;
+            height: 200px;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            border-color: var(--accent-gold);
+        }
+        
+        .position-display {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .position-display:active {
+            transform: scale(0.98);
+        }
+        
+        .position-display.selected {
+            border-color: var(--accent-gold);
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+        }
+        
+        .position-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .position-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .action-btn {
+            padding: 1rem;
+            font-size: 0.95rem;
+        }
+        
+        .action-btn.fold { border-color: var(--accent-red); }
+        .action-btn.fold.active { background: var(--accent-red); color: white; }
+        
+        .action-btn.call, .action-btn.check { border-color: var(--accent-green); }
+        .action-btn.call.active, .action-btn.check.active { background: var(--accent-green); color: white; }
+        
+        .player-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .player-btn {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .action-log {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+        
+        .street-column {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 0.75rem 0.5rem;
+            min-height: 150px;
+        }
+        
+        .street-title {
+            font-size: 0.7rem;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .action-item {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            line-height: 1.3;
+        }
+        
+        .save-btn {
+            width: 100%;
+            padding: 1.25rem;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #f4e6c3 100%);
+            color: var(--bg-primary);
+            border: none;
+            margin-top: 1rem;
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+        }
+        
+        .save-btn:active {
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-gold);
+            border-radius: 16px;
+            padding: 1.5rem;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: var(--accent-gold);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .suit-label {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .card-btn {
+            aspect-ratio: 2.5/3.5;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .card-btn.selected {
+            border-color: var(--accent-gold);
+            border-width: 3px;
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+        }
+        
+        .card-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .position-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .position-btn {
+            padding: 1rem;
+            font-size: 1rem;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border);
+        }
+        
+        .position-btn.selected {
+            border-color: var(--accent-gold);
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+        }
+        
+        .custom-input {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+        
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .history-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .history-item:active {
+            transform: scale(0.98);
+        }
+        
+        .history-item.expanded {
+            border-color: var(--accent-gold);
+        }
+        
+        .history-date {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .history-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-expanded-content {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .history-item.expanded .history-expanded-content {
+            display: block;
+        }
+        
+        .history-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        
+        .history-street-column {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 0.5rem;
+        }
+        
+        .history-street-title {
+            font-size: 0.65rem;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .delete-hand-btn {
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            width: 100%;
+            cursor: pointer;
+        }
+        
+        .delete-hand-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .expand-indicator {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+        }
+        
+        .view-history-btn {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--accent-gold);
+            color: var(--accent-gold);
+            width: 100%;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .street-indicator {
+            display: inline-block;
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+    </style>
 </head>
-
 <body>
-
-<h1>🃏 Poker Hand</h1>
-
-<div id="home">
-  <button class="btn" onclick="newHand()">➕ New Hand</button>
-  <button class="btn secondary" onclick="viewHands()">📋 Review Hands</button>
-</div>
-
-<div id="hand" class="hidden">
-
-  <h2>Hero Cards</h2>
-  <div id="cards" class="grid"></div>
-
-  <h2>Position</h2>
-  <div class="grid" id="positions"></div>
-
-  <h2 id="streetTitle">Preflop</h2>
-  <div class="action-grid">
-    <button class="btn secondary" onclick="logAction('folds')">Fold</button>
-    <button class="btn secondary" onclick="logAction('calls')">Call</button>
-    <button class="btn secondary" onclick="logAction('raises')">Raise</button>
-  </div>
-
-  <button class="btn secondary" onclick="voiceInput()">🎙️ Speak Action</button>
-
-  <h2>Board</h2>
-  <div id="board" class="grid"></div>
-
-  <h2>Action Log</h2>
-  <div class="log" id="log"></div>
-
-  <button class="btn" onclick="saveHand()">💾 Save Hand</button>
-</div>
-
-<div id="review" class="hidden">
-  <h2>Saved Hands</h2>
-  <div id="handList"></div>
-  <button class="btn secondary" onclick="goHome()">⬅ Back</button>
-</div>
-
-<script src="app.js"></script>
+    <div class="app">
+        <h1>♠ Poker Tracker ♣</h1>
+        
+        <button class="btn view-history-btn" id="viewHistoryBtn">📚 View Hand History</button>
+        
+        <!-- Game Info -->
+        <div class="section">
+            <div class="section-title">Game Info</div>
+            <div style="margin-bottom: 1rem;">
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">BLINDS</div>
+                <input type="text" class="custom-input" id="blindsInput" placeholder="e.g., 1/2, 2/5, 5/10">
+            </div>
+            <div class="info-grid">
+                <div>
+                    <div class="position-display" id="positionDisplay">
+                        <div class="position-label">Position</div>
+                        <div class="position-value">—</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="position-display" id="stackDisplay">
+                        <div class="position-label">Stack</div>
+                        <div class="position-value">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hero Cards -->
+        <div class="section">
+            <div class="section-title">Hero Cards</div>
+            <div class="card-slot" id="heroSlot">
+                <span class="card-slot-label">Tap to select your cards</span>
+            </div>
+        </div>
+        
+        <!-- Villain Cards -->
+        <div class="section">
+            <div class="section-title">Villain Cards <span style="font-size: 0.7rem; color: var(--text-secondary);">(Optional)</span></div>
+            <div class="card-slot" id="villainSlot">
+                <span class="card-slot-label">Tap to select villain cards</span>
+            </div>
+        </div>
+        
+        <!-- Board Cards -->
+        <div class="section">
+            <div class="section-title">Board <span id="streetIndicator"></span></div>
+            <div class="card-slot" id="boardSlot">
+                <span class="card-slot-label">Tap to select board cards</span>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="section">
+            <div class="section-title">Record Action</div>
+            <button class="btn" id="configurePlayersBtn" style="width: 100%; margin-bottom: 1rem;">⚙️ Configure Players in Hand</button>
+            
+            <div id="selectedPlayersContainer" style="margin-bottom: 1rem; display: none;">
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">PLAYERS IN HAND</div>
+                <div class="player-grid" id="activePlayerGrid"></div>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">STREET</div>
+                <div class="button-group" style="grid-template-columns: repeat(4, 1fr);">
+                    <button class="btn street-btn active" data-street="preflop">Preflop</button>
+                    <button class="btn street-btn" data-street="flop">Flop</button>
+                    <button class="btn street-btn" data-street="turn">Turn</button>
+                    <button class="btn street-btn" data-street="river">River</button>
+                </div>
+            </div>
+            
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">SELECT ACTION</div>
+            <div class="action-grid">
+                <button class="btn action-btn fold" data-action="Fold">Fold</button>
+                <button class="btn action-btn call" data-action="Call">Call</button>
+                <button class="btn action-btn check" data-action="Check">Check</button>
+                <button class="btn action-btn" data-action="Bet">Bet</button>
+                <button class="btn action-btn" data-action="Raise">Raise</button>
+                <button class="btn action-btn" data-action="All-in">All-in</button>
+            </div>
+            
+            <button class="btn" id="undoActionBtn" style="width: 100%; margin-top: 1rem; background: var(--accent-red); color: white;">↶ Undo Last Action</button>
+        </div>
+        
+        <!-- Action Log -->
+        <div class="section">
+            <div class="section-title">Action Log</div>
+            <div class="action-log">
+                <div class="street-column">
+                    <div class="street-title">Preflop</div>
+                    <div id="logPreflop"></div>
+                </div>
+                <div class="street-column">
+                    <div class="street-title">Flop</div>
+                    <div id="logFlop"></div>
+                </div>
+                <div class="street-column">
+                    <div class="street-title">Turn</div>
+                    <div id="logTurn"></div>
+                </div>
+                <div class="street-column">
+                    <div class="street-title">River</div>
+                    <div id="logRiver"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <button class="btn save-btn" id="saveBtn">💾 Save Hand</button>
+    </div>
+    
+    <!-- Card Picker Modal -->
+    <div class="modal" id="cardModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="cardModalTitle">Select Cards</div>
+                <button class="close-btn" id="closeCardModal">&times;</button>
+            </div>
+            <div id="cardGridContainer"></div>
+        </div>
+    </div>
+    
+    <!-- Position Picker Modal -->
+    <div class="modal" id="positionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Select Position</div>
+                <button class="close-btn" id="closePositionModal">&times;</button>
+            </div>
+            <div class="position-grid">
+                <button class="btn position-btn" data-position="SB">SB</button>
+                <button class="btn position-btn" data-position="BB">BB</button>
+                <button class="btn position-btn" data-position="UTG">UTG</button>
+                <button class="btn position-btn" data-position="UTG+1">UTG+1</button>
+                <button class="btn position-btn" data-position="UTG+2">UTG+2</button>
+                <button class="btn position-btn" data-position="LJ">LJ</button>
+                <button class="btn position-btn" data-position="HJ">HJ</button>
+                <button class="btn position-btn" data-position="CO">CO</button>
+                <button class="btn position-btn" data-position="BTN">BTN</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stack Picker Modal -->
+    <div class="modal" id="stackModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Select Stack Size</div>
+                <button class="close-btn" id="closeStackModal">&times;</button>
+            </div>
+            <div class="button-group">
+                <button class="btn stack-btn" data-stack="50bb">50bb</button>
+                <button class="btn stack-btn" data-stack="100bb">100bb</button>
+                <button class="btn stack-btn" data-stack="150bb">150bb</button>
+            </div>
+            <input type="text" class="custom-input" id="customStack" placeholder="Custom (e.g., 75bb)">
+        </div>
+    </div>
+    
+    <!-- History Modal -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Hand History</div>
+                <button class="close-btn" id="closeHistoryModal">&times;</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+    
+    <!-- Configure Players Modal -->
+    <div class="modal" id="playersModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Configure Players</div>
+                <button class="close-btn" id="closePlayersModal">&times;</button>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Select which players are in this hand:
+            </div>
+            <div class="position-grid" id="allPlayersGrid">
+                <button class="btn position-btn" data-player="SB">SB</button>
+                <button class="btn position-btn" data-player="BB">BB</button>
+                <button class="btn position-btn" data-player="UTG">UTG</button>
+                <button class="btn position-btn" data-player="UTG+1">UTG+1</button>
+                <button class="btn position-btn" data-player="UTG+2">UTG+2</button>
+                <button class="btn position-btn" data-player="LJ">LJ</button>
+                <button class="btn position-btn" data-player="HJ">HJ</button>
+                <button class="btn position-btn" data-player="CO">CO</button>
+                <button class="btn position-btn" data-player="BTN">BTN</button>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin: 1.5rem 0 0.5rem;">
+                Which player is Hero?
+            </div>
+            <div id="heroSelectGrid" class="position-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+            <button class="btn save-btn" id="savePlayersBtn" style="margin-top: 1.5rem;">✓ Confirm Players</button>
+        </div>
+    </div>
+    
+    <!-- Bet Amount Modal -->
+    <div class="modal" id="betAmountModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="betAmountTitle">Enter Amount</div>
+                <button class="close-btn" id="closeBetAmountModal">&times;</button>
+            </div>
+            <input type="text" class="custom-input" id="betAmountInput" placeholder="e.g., 10, 25, 3x, pot" style="font-size: 1.2rem; text-align: center;">
+            <button class="btn save-btn" id="confirmBetAmount" style="margin-top: 1rem;">✓ Confirm</button>
+        </div>
+    </div>
+    
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal" id="shortcutsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">⌨️ Keyboard Shortcuts</div>
+                <button class="close-btn" id="closeShortcutsModal">&times;</button>
+            </div>
+            <div style="font-size: 0.9rem; line-height: 1.8;">
+                <strong>Player Selection:</strong><br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">1-9</code> Select player by position<br><br>
+                
+                <strong>Actions (when player selected):</strong><br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">F</code> Fold<br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">C</code> Call<br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">K</code> Check<br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">B</code> Bet<br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">R</code> Raise<br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">A</code> All-in<br><br>
+                
+                <strong>Other:</strong><br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">Ctrl/Cmd+Z</code> Undo last action<br>
+                <code style="background: var(--bg-tertiary); padding: 0.2rem 0.4rem; border-radius: 4px;">?</code> Show this help<br>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed'));
+        }
+    </script>
 </body>
 </html>
