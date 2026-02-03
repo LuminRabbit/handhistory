@@ -7,6 +7,7 @@ const state = {
     position: '',
     stack: '',
     activePlayers: [], // Players in the hand
+    foldedPlayers: [], // Players who have folded this hand
     heroPlayer: '', // Which player is Hero
     currentStreet: 'preflop', // Which street we're recording actions for
     selectedPlayer: '',
@@ -40,8 +41,10 @@ const suits = {
 // Get players in action order for current street
 function getOrderedPlayers() {
     const order = actionOrder[state.currentStreet];
-    // Filter to only include active players, in the correct order
-    return order.filter(player => state.activePlayers.includes(player));
+    // Filter to only include active players who haven't folded, in the correct order
+    return order.filter(player => 
+        state.activePlayers.includes(player) && !state.foldedPlayers.includes(player)
+    );
 }
 
 // Auto-select next player
@@ -127,14 +130,9 @@ function createCardGrid(selectedCards, maxCards, excludeCards = []) {
     container.innerHTML = '';
     
     Object.keys(suits).forEach(suit => {
-        const suitLabel = document.createElement('div');
-        suitLabel.className = 'suit-label';
-        suitLabel.textContent = suit;
-        suitLabel.style.color = suits[suit];
-        container.appendChild(suitLabel);
-        
         const grid = document.createElement('div');
         grid.className = 'card-grid';
+        grid.style.marginBottom = '1rem';
         
         ranks.forEach(rank => {
             const cardValue = rank + suit;
@@ -144,8 +142,18 @@ function createCardGrid(selectedCards, maxCards, excludeCards = []) {
             
             const button = document.createElement('button');
             button.className = 'card-btn';
-            button.textContent = rank;
             button.style.color = suits[suit];
+            
+            const rankSpan = document.createElement('div');
+            rankSpan.className = 'card-rank';
+            rankSpan.textContent = rank;
+            
+            const suitSpan = document.createElement('div');
+            suitSpan.className = 'card-suit';
+            suitSpan.textContent = suit;
+            
+            button.appendChild(rankSpan);
+            button.appendChild(suitSpan);
             
             if (isSelected) {
                 button.classList.add('selected');
@@ -364,7 +372,10 @@ document.getElementById('savePlayersBtn').addEventListener('click', () => {
         return;
     }
     
+    // Clear any previous folded players when reconfiguring
+    state.foldedPlayers = [];
     updateActivePlayerGrid();
+    resetPlayerIndex();
     closeModal('playersModal');
 });
 
@@ -437,6 +448,14 @@ function recordAction(player, action) {
     state.actions[state.currentStreet].push(actionText);
     updateActionLog();
     
+    // If player folded, add them to folded list and update UI
+    if (action === 'Fold') {
+        if (!state.foldedPlayers.includes(player)) {
+            state.foldedPlayers.push(player);
+            updateActivePlayerGrid();
+        }
+    }
+    
     // Auto-advance to next player
     autoSelectNextPlayer();
 }
@@ -445,7 +464,18 @@ function recordAction(player, action) {
 document.getElementById('undoActionBtn').addEventListener('click', () => {
     const currentActions = state.actions[state.currentStreet];
     if (currentActions.length > 0) {
-        currentActions.pop();
+        const lastAction = currentActions.pop();
+        
+        // If the undone action was a fold, remove player from folded list
+        if (lastAction.includes(': Fold')) {
+            const player = lastAction.split(':')[0];
+            const index = state.foldedPlayers.indexOf(player);
+            if (index > -1) {
+                state.foldedPlayers.splice(index, 1);
+                updateActivePlayerGrid();
+            }
+        }
+        
         updateActionLog();
         
         // Go back to previous player
@@ -516,6 +546,7 @@ function resetHand() {
     state.position = '';
     state.stack = '';
     state.activePlayers = [];
+    state.foldedPlayers = [];
     state.heroPlayer = '';
     state.currentStreet = 'preflop';
     state.selectedPlayer = '';
@@ -685,7 +716,12 @@ function updateActivePlayerGrid() {
     const activeGrid = document.getElementById('activePlayerGrid');
     activeGrid.innerHTML = '';
     
-    state.activePlayers.forEach(player => {
+    // Show only players who haven't folded
+    const playersToShow = state.activePlayers.filter(player => 
+        !state.foldedPlayers.includes(player)
+    );
+    
+    playersToShow.forEach(player => {
         const btn = document.createElement('button');
         btn.className = 'btn player-btn';
         btn.dataset.player = player;
@@ -708,10 +744,24 @@ function updateActivePlayerGrid() {
         activeGrid.appendChild(btn);
     });
     
-    if (state.activePlayers.length > 0) {
+    if (playersToShow.length > 0) {
         document.getElementById('selectedPlayersContainer').style.display = 'block';
-        // Initialize first player selection
-        resetPlayerIndex();
+        // Re-initialize player selection after grid update
+        const orderedPlayers = getOrderedPlayers();
+        if (orderedPlayers.length > 0 && !orderedPlayers.includes(state.selectedPlayer)) {
+            // If current player folded, move to next
+            state.currentPlayerIndex = -1;
+            autoSelectNextPlayer();
+        } else {
+            highlightPlayerButton(state.selectedPlayer);
+        }
+    } else {
+        // All players folded - hand is over
+        document.getElementById('selectedPlayersContainer').style.display = 'block';
+        const indicator = document.getElementById('actionIndicator');
+        if (indicator) {
+            indicator.textContent = '✓ Hand complete';
+        }
     }
 }
 
