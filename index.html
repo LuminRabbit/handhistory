@@ -419,14 +419,6 @@
             display: grid;
             grid-template-columns: repeat(13, 1fr);
             gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .suit-label {
-            grid-column: 1 / -1;
-            text-align: center;
-            font-size: 1.5rem;
-            margin: 0.5rem 0;
         }
         
         .card-btn {
@@ -434,13 +426,25 @@
             background: white;
             border: 2px solid #ddd;
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        
+        .card-rank {
+            font-size: 1rem;
+        }
+        
+        .card-suit {
+            font-size: 1.2rem;
+            margin-top: 0.1rem;
         }
         
         .card-btn:active {
@@ -635,19 +639,22 @@
             </div>
         </div>
         
-        <!-- Hero Cards -->
+        <!-- Hero & Villain Cards -->
         <div class="section">
-            <div class="section-title">Hero Cards</div>
-            <div class="card-slot" id="heroSlot">
-                <span class="card-slot-label">Tap to select your cards</span>
-            </div>
-        </div>
-        
-        <!-- Villain Cards -->
-        <div class="section">
-            <div class="section-title">Villain Cards <span style="font-size: 0.7rem; color: var(--text-secondary);">(Optional)</span></div>
-            <div class="card-slot" id="villainSlot">
-                <span class="card-slot-label">Tap to select villain cards</span>
+            <div class="section-title">Cards</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-align: center;">HERO</div>
+                    <div class="card-slot" id="heroSlot">
+                        <span class="card-slot-label">Tap to select</span>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-align: center;">VILLAIN</div>
+                    <div class="card-slot" id="villainSlot">
+                        <span class="card-slot-label">Tap to select</span>
+                    </div>
+                </div>
             </div>
         </div>
         
