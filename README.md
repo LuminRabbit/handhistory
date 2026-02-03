@@ -2,14 +2,22 @@
 
 A sleek, mobile-first Progressive Web App for tracking poker hand history with a sophisticated casino-noir aesthetic.
 
+**Live Demo**: https://luminrabbit.github.io/handhistory/
+
 ## ✨ Features
 
 - **Hero Cards Selection**: Tap to select your 2 hole cards from an interactive card grid
+- **Villain Cards Selection**: Optional villain hole cards tracking
 - **Board Cards Selection**: Select up to 5 community cards with automatic street detection (Flop/Turn/River)
 - **Game Info**: Quick blind selection (1/2, 1/3, 2/5), position picker, and stack size
-- **Action Entry**: Two-step process - select player, then action
+- **Player Configuration**: Select which players are in the hand and mark Hero
+- **Auto-Advancing Actions**: Automatically cycles through players in correct order
+- **Fold Tracking**: Folded players automatically removed from action buttons
+- **Action Entry**: Select street, then action - player auto-advances
+- **Keyboard Shortcuts**: Lightning-fast action recording (F/C/K/B/R/A keys)
 - **Action Log**: Organized in 4 columns (Preflop/Flop/Turn/River)
-- **Hand History**: Save hands to localStorage and review them later
+- **Undo Function**: Fix mistakes with one tap (or Ctrl/Cmd+Z)
+- **Hand History**: Save hands to localStorage, expand to see full details, delete unwanted hands
 - **PWA Support**: Install on mobile devices and use offline
 - **Mobile-First Design**: Optimized for touch interactions and small screens
 
@@ -203,4 +211,3 @@ Potential features to add:
 ---
 
 **Enjoy tracking your poker hands!** 🃏♠♥♦♣
-
