@@ -10,6 +10,7 @@ const state = {
     heroPlayer: '', // Which player is Hero
     currentStreet: 'preflop', // Which street we're recording actions for
     selectedPlayer: '',
+    currentPlayerIndex: 0, // For auto-advancing
     pendingAction: null, // For bet/raise amounts
     actions: {
         preflop: [],
@@ -17,6 +18,14 @@ const state = {
         turn: [],
         river: []
     }
+};
+
+// Action order by street
+const actionOrder = {
+    preflop: ['UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN', 'SB', 'BB'],
+    flop: ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN'],
+    turn: ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN'],
+    river: ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN']
 };
 
 // Card data
@@ -27,6 +36,49 @@ const suits = {
     '♦': '#ef4444',
     '♣': '#000'
 };
+
+// Get players in action order for current street
+function getOrderedPlayers() {
+    const order = actionOrder[state.currentStreet];
+    // Filter to only include active players, in the correct order
+    return order.filter(player => state.activePlayers.includes(player));
+}
+
+// Auto-select next player
+function autoSelectNextPlayer() {
+    const orderedPlayers = getOrderedPlayers();
+    
+    if (orderedPlayers.length === 0) return;
+    
+    // Move to next player
+    state.currentPlayerIndex = (state.currentPlayerIndex + 1) % orderedPlayers.length;
+    state.selectedPlayer = orderedPlayers[state.currentPlayerIndex];
+    
+    // Highlight the button
+    highlightPlayerButton(state.selectedPlayer);
+}
+
+// Highlight the current player button
+function highlightPlayerButton(player) {
+    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
+    const playerBtn = Array.from(document.querySelectorAll('.player-btn'))
+        .find(btn => btn.dataset.player === player);
+    if (playerBtn) {
+        playerBtn.classList.add('active');
+    }
+    
+    // Update action indicator
+    const indicator = document.getElementById('actionIndicator');
+    if (indicator) {
+        indicator.textContent = `→ ${player} to act`;
+    }
+}
+
+// Reset player index when street changes
+function resetPlayerIndex() {
+    state.currentPlayerIndex = -1;
+    autoSelectNextPlayer();
+}
 
 // Update street indicator
 function updateStreetIndicator() {
@@ -326,6 +378,7 @@ document.querySelectorAll('.street-btn').forEach(btn => {
         document.querySelectorAll('.street-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.currentStreet = btn.dataset.street;
+        resetPlayerIndex();
     });
 });
 
@@ -384,9 +437,8 @@ function recordAction(player, action) {
     state.actions[state.currentStreet].push(actionText);
     updateActionLog();
     
-    // Clear player selection
-    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
-    state.selectedPlayer = '';
+    // Auto-advance to next player
+    autoSelectNextPlayer();
 }
 
 // Undo last action
@@ -395,6 +447,14 @@ document.getElementById('undoActionBtn').addEventListener('click', () => {
     if (currentActions.length > 0) {
         currentActions.pop();
         updateActionLog();
+        
+        // Go back to previous player
+        const orderedPlayers = getOrderedPlayers();
+        if (orderedPlayers.length > 0) {
+            state.currentPlayerIndex = (state.currentPlayerIndex - 1 + orderedPlayers.length) % orderedPlayers.length;
+            state.selectedPlayer = orderedPlayers[state.currentPlayerIndex];
+            highlightPlayerButton(state.selectedPlayer);
+        }
     } else {
         alert('No actions to undo on current street');
     }
@@ -459,6 +519,7 @@ function resetHand() {
     state.heroPlayer = '';
     state.currentStreet = 'preflop';
     state.selectedPlayer = '';
+    state.currentPlayerIndex = 0;
     state.pendingAction = null;
     state.actions = {
         preflop: [],
@@ -638,6 +699,10 @@ function updateActivePlayerGrid() {
             document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.selectedPlayer = player;
+            
+            // Update current player index to match manual selection
+            const orderedPlayers = getOrderedPlayers();
+            state.currentPlayerIndex = orderedPlayers.indexOf(player);
         });
         
         activeGrid.appendChild(btn);
@@ -645,6 +710,8 @@ function updateActivePlayerGrid() {
     
     if (state.activePlayers.length > 0) {
         document.getElementById('selectedPlayersContainer').style.display = 'block';
+        // Initialize first player selection
+        resetPlayerIndex();
     }
 }
 
