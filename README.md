@@ -1,4 +1,4 @@
-# 🎰 Poker Hand Tracker PWA
+# 🎰 Poker Hand History Tracker PWA
 
 A sleek, mobile-first Progressive Web App for tracking poker hand history with a sophisticated casino-noir aesthetic.
 
