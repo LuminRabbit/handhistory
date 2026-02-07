@@ -32,10 +32,10 @@ const actionOrder = {
 // Card data
 const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
 const suits = {
-    '♠': '#000',
+    '♠': '#808080',
     '♥': '#ef4444',
     '♦': '#ef4444',
-    '♣': '#000'
+    '♣': '#808080'
 };
 
 // Get players in action order for current street
@@ -824,3 +824,4 @@ renderSelectedCards(state.heroCards, 'heroSlot');
 renderSelectedCards(state.villainCards, 'villainSlot');
 renderSelectedCards(state.boardCards, 'boardSlot');
 updateActionLog();
+
