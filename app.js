@@ -32,10 +32,10 @@ const actionOrder = {
 // Card data
 const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
 const suits = {
-    '♠': '#808080',
+    '♠': '#000',
     '♥': '#ef4444',
     '♦': '#ef4444',
-    '♣': '#808080'
+    '♣': '#000'
 };
 
 // Get players in action order for current street
@@ -409,6 +409,11 @@ document.querySelectorAll('.action-btn').forEach(btn => {
             document.getElementById('betAmountTitle').textContent = `Enter ${action} Amount`;
             document.getElementById('betAmountInput').value = '';
             openModal('betAmountModal');
+            
+            // Auto-focus input and show numeric keyboard
+            setTimeout(() => {
+                document.getElementById('betAmountInput').focus();
+            }, 100);
         } else {
             // Record action immediately
             recordAction(state.selectedPlayer, action);
@@ -824,4 +829,3 @@ renderSelectedCards(state.heroCards, 'heroSlot');
 renderSelectedCards(state.villainCards, 'villainSlot');
 renderSelectedCards(state.boardCards, 'boardSlot');
 updateActionLog();
-
